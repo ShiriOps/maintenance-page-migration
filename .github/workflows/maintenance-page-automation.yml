@@ -4,7 +4,7 @@ Resources:
   MaintenancePageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub maintenance-page-${AWS::AccountId}
+      BucketName: my-maintenance-bucket-123${AWS::AccountId}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
@@ -14,13 +14,13 @@ Resources:
   MaintenancePageBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref MaintenancePageBucket
+      Bucket: my-maintenance-bucket-123
       PolicyDocument:
         Statement:
           - Effect: Allow
             Principal: "*"
             Action: s3:GetObject
-            Resource: !Sub arn:aws:s3:::${MaintenancePageBucket}/*
+            Resource: arn:aws:s3:::${MaintenancePageBucket}/*
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
@@ -40,12 +40,12 @@ Resources:
                 - aws s3 sync . s3://$MAINTENANCE_BUCKET --delete
         env:
           variables:
-            MAINTENANCE_BUCKET: !Ref MaintenancePageBucket
+            MAINTENANCE_BUCKET: MaintenancePageBucket
     Environment:
       ComputeType: BUILD_GENERAL1_SMALL
       Image: aws/codebuild/standard:5.0
       Type: LINUX_CONTAINER
-    ServiceRole: !GetAtt CodeBuildRole.Arn
+    ServiceRole: CodeBuildRole.Arn
     Artifacts:
       Type: NO_ARTIFACTS
     TimeoutInMinutes: 5
@@ -67,14 +67,14 @@ CodeBuildRole:
                 Action:
                   - s3:PutObject
                   - s3:DeleteObject
-                Resource: !Sub arn:aws:s3:::${MaintenancePageBucket}/*
+                Resource: arn:aws:s3:::${MaintenancePageBucket}/*
 
-  EnableMaintenanceLambda:
+EnableMaintenanceLambda:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.lambda_handler
       Runtime: python3.9
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: LambdaExecutionRole.Arn
       Code:
         ZipFile: |
           import boto3
@@ -83,12 +83,12 @@ CodeBuildRole:
               client.start_build(projectName='MaintenancePageDeploy')
       Timeout: 10
 
-  DisableMaintenanceLambda:
+DisableMaintenanceLambda:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.lambda_handler
       Runtime: python3.9
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: LambdaExecutionRole.Arn
       Code:
         ZipFile: |
           import boto3
@@ -98,7 +98,7 @@ CodeBuildRole:
               s3.delete_object(Bucket=bucket_name, Key='index.html')
       Timeout: 10
 
-  LambdaExecutionRole:
+LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -114,29 +114,29 @@ CodeBuildRole:
               - Effect: Allow
                 Action:
                   - codebuild:StartBuild
-                Resource: !GetAtt CodeBuildProject.Arn
+                Resource: CodeBuildProject.Arn
               - Effect: Allow
                 Action:
                   - s3:DeleteObject
-                Resource: !Sub arn:aws:s3:::${MaintenancePageBucket}/*
+                Resource: arn:aws:s3:::${MaintenancePageBucket}/*
 
-  EnableMaintenanceRule:
+EnableMaintenanceRule:
     Type: AWS::Events::Rule
     Properties:
       ScheduleExpression: 'cron(0 23 ? * 6 *)'  # Every Saturday at 11 PM UTC
       Targets:
-        - Arn: !GetAtt EnableMaintenanceLambda.Arn
+        - Arn: EnableMaintenanceLambda.Arn
           Id: "EnableMaintenance"
 
-  DisableMaintenanceRule:
+DisableMaintenanceRule:
     Type: AWS::Events::Rule
     Properties:
       ScheduleExpression: 'cron(0 2 ? * 7 *)'  # Every Sunday at 2 AM UTC
       Targets:
-        - Arn: !GetAtt DisableMaintenanceLambda.Arn
+        - Arn: DisableMaintenanceLambda.Arn
           Id: "DisableMaintenance"
 
 Outputs:
   MaintenancePageBucketURL:
-    Value: !Sub "https://${MaintenancePageBucket}.s3.amazonaws.com/index.html"
-    Description: "URL of the maintenance page hosted in S3"
+    Value:"https://${MaintenancePageBucket}.s3.amazonaws.com/index.html"
+    Description: "https://us-east-1.console.aws.amazon.com/s3/buckets/my-maintenance-bucket-123"
