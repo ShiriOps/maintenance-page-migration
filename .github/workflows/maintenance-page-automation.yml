@@ -4,7 +4,7 @@ Resources:
   MaintenancePageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub maintenance-page-${AWS::180294187659}
+      BucketName: !Sub maintenance-page-${AWS::AccountId}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
@@ -29,28 +29,28 @@ Resources:
       Source:
         Type: GITHUB
         Location: https://github.com/ShiriOps/maintenance-page-migration
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/standard:5.0
-        Type: LINUX_CONTAINER
-      ServiceRole: !GetAtt CodeBuildRole.Arn
-      Artifacts:
-        Type: NO_ARTIFACTS
-      TimeoutInMinutes: 5
-      BuildSpec: |
-        version: 0.2
-        phases:
-          install:
-            commands:
-              - echo "Installing dependencies"
-          build:
-            commands:
-              - aws s3 sync . s3://$MAINTENANCE_BUCKET --delete
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - echo "Installing dependencies"
+            build:
+              commands:
+                - aws s3 sync . s3://$MAINTENANCE_BUCKET --delete
         env:
           variables:
             MAINTENANCE_BUCKET: !Ref MaintenancePageBucket
+    Environment:
+      ComputeType: BUILD_GENERAL1_SMALL
+      Image: aws/codebuild/standard:5.0
+      Type: LINUX_CONTAINER
+    ServiceRole: !GetAtt CodeBuildRole.Arn
+    Artifacts:
+      Type: NO_ARTIFACTS
+    TimeoutInMinutes: 5
 
-  CodeBuildRole:
+CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
