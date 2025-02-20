@@ -4,7 +4,7 @@ Resources:
   MaintenancePageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName:my-maintenance-bucket-123${AWS::AccountId}
+      BucketName:!Sub my-maintenance-bucket-123${AWS::AccountId}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
@@ -20,7 +20,7 @@ Resources:
           - Effect: Allow
             Principal: "*"
             Action: s3:GetObject
-            Resource: arn:aws:s3:::${MaintenancePageBucket}/*
+            Resource: !Sub arn:aws:s3:::${MaintenancePageBucket}/*
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
@@ -28,7 +28,7 @@ Resources:
       Name: MaintenancePageDeploy
       Source:
         Type: GITHUB
-        Location: https://github.com/YOUR_GITHUB_REPO
+        Location: https://github.com/ShiriOps/maintenance-page-migration
       Environment:
         ComputeType: BUILD_GENERAL1_SMALL
         Image: aws/codebuild/standard:5.0
